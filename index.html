@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grade 10 Virtual Gallery</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
+            --glass: rgba(255, 255, 255, 0.4);
+            --card-bg: rgba(255, 255, 255, 0.8);
+            --text-main: #6b21a8;
+            --accent: #9d50bb;
+        }
+
+        [data-theme="dark"] {
+            --bg-gradient: linear-gradient(135deg, #020617 0%, #1e1b4b 100%);
+            --glass: rgba(15, 23, 42, 0.7);
+            --card-bg: #1e293b;
+            --text-main: #f0f9ff;
+            --accent: #00d4ff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-gradient); background-attachment: fixed; color: var(--text-main); transition: background 1s ease; overflow-x: hidden; }
+
+        #sparkle-canvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+
+        /* --- LOADER --- */
+        #loader { position: fixed; inset: 0; background: #020617; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; color: white; }
+        .aurora-glow { position: absolute; width: 200%; height: 200%; background: radial-gradient(circle at 50% 20%, #9d50bb 0%, transparent 40%), radial-gradient(circle at 20% 80%, #00d4ff 0%, transparent 40%); filter: blur(80px); animation: auroraMove 10s infinite alternate; opacity: 0.6; }
+        .progress-bar { width: 250px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-top: 20px; overflow: hidden; }
+        .progress-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #a855f7, #00d4ff); animation: fill 3.5s forwards; }
+
+        /* --- NAVIGATION --- */
+        .side-nav { position: fixed; right: 25px; top: 50%; transform: translateY(-50%); background: var(--glass); backdrop-filter: blur(25px); padding: 20px; border-radius: 40px; border: 1px solid rgba(255,255,255,0.3); width: 75px; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 1000; }
+        .side-nav:hover { width: 280px; }
+        .nav-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; border-radius: 25px; margin-bottom: 8px; cursor: pointer; background: rgba(255,255,255,0.1); }
+        .nav-label { font-size: 0.9rem; font-weight: 600; margin-left: 15px; opacity: 0; white-space: nowrap; }
+        .side-nav:hover .nav-label { opacity: 1; }
+        .switch { position: relative; width: 44px; height: 22px; opacity: 0; }
+        .side-nav:hover .switch { opacity: 1; }
+        .switch input { display: none; }
+        .slider { position: absolute; inset: 0; background: #64748b; border-radius: 20px; cursor: pointer; }
+        .slider:before { content: ""; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+        input:checked + .slider { background: #9d50bb; }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        /* --- HERO --- */
+        .hero { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .hero h1 { font-size: clamp(3rem, 10vw, 6rem); font-weight: 800; background: linear-gradient(45deg, #9d50bb, #ff0080); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        /* --- ART SECTIONS (FIXED IMAGE SIZES) --- */
+        .artist-section { padding: 80px 5%; display: flex; flex-direction: column; align-items: center; }
+        
+        .art-row { 
+            display: flex; 
+            gap: 20px; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            background: var(--card-bg); 
+            padding: 25px; 
+            border-radius: 30px; 
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            transition: transform 0.4s ease;
+        }
+        .art-row:hover { transform: translateY(-5px); }
+
+        .art-container img { 
+            width: 320px; /* Fixed size so they aren't too big */
+            height: auto; 
+            border-radius: 15px;
+            display: block;
+        }
+
+        .name-banner { 
+            margin-top: 20px; 
+            background: linear-gradient(45deg, #9d50bb, #6e48aa); 
+            color: white; 
+            padding: 10px 30px; 
+            border-radius: 30px; 
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(157, 80, 187, 0.3);
+        }
+
+        /* --- FOOTER --- */
+        .footer { padding: 100px 0 0 0; text-align: center; }
+        .footer h1 { font-size: 5rem; font-weight: 800; margin-bottom: 20px; }
+        .back-to-top { background: #9d50bb; color: white; border: none; padding: 15px 40px; border-radius: 30px; cursor: pointer; font-weight: bold; margin-bottom: 50px; }
+        
+        .bottom-credit { 
+            background: #020617; color: white; padding: 60px 20px; position: relative; overflow: hidden; 
+        }
+        .bottom-credit::before {
+            content: ""; position: absolute; inset: 0;
+            background-image: radial-gradient(1px 1px at 25% 35%, white, transparent), radial-gradient(1.5px 1.5px at 60% 75%, white, transparent), radial-gradient(2px 2px at 10% 80%, #fff, transparent);
+            background-size: 250px 250px; opacity: 0.5; animation: footerStars 5s infinite alternate;
+        }
+
+        @keyframes footerStars { from { opacity: 0.3; } to { opacity: 0.7; } }
+        @keyframes auroraMove { from { transform: translate(-10%, -10%); } to { transform: translate(10%, 10%); } }
+        @keyframes fill { to { width: 100%; } }
+    </style>
+</head>
+<body>
+
+    <div id="loader">
+        <div class="aurora-glow"></div>
+        <div style="z-index: 10; text-align: center;">
+            <h1 style="letter-spacing: 8px;">✨ PREPARING...</h1>
+            <div class="progress-bar"><div class="progress-fill"></div></div>
+        </div>
+    </div>
+
+    <canvas id="sparkle-canvas"></canvas>
+
+    <nav class="side-nav">
+        <div class="nav-row" onclick="window.scrollTo({top:0, behavior:'smooth'})"><span>🏠</span> <span class="nav-label">Home</span></div>
+        <div class="nav-row"><span>🔲</span> <span class="nav-label">Grid View</span><label class="switch"><input type="checkbox" id="grid-toggle"><span class="slider"></span></label></div>
+        <div class="nav-row"><span>🌙</span> <span class="nav-label">Dark Mode</span><label class="switch"><input type="checkbox" id="dark-toggle"><span class="slider"></span></label></div>
+        <div class="nav-row"><span>▶️</span> <span class="nav-label">Auto Tour</span><label class="switch"><input type="checkbox" id="tour-toggle"><span class="slider"></span></label></div>
+    </nav>
+
+    <section class="hero">
+        <h1>GRADE 10</h1>
+        <h2>(10-1)</h2>
+        <p style="letter-spacing: 5px; opacity: 0.7;">VIRTUAL ART MUSEUM</p>
+    </section>
+
+    <div id="gallery">
+        <section class="artist-section">
+            <div class="art-row">
+                <div class="art-container"><img src="https://i.postimg.cc/SKJsZXhk/Alex1.png"></div>
+                <div class="art-container"><img src="https://i.postimg.cc/jqQs467H/Alex2.png"></div>
+            </div>
+            <div class="name-banner">Alex Vernice Espiritu</div>
+        </section>
+
+        <section class="artist-section">
+            <div class="art-row">
+                <div class="art-container"><img src="https://i.postimg.cc/SNmkjXjL/mabilangan1.png"></div>
+            </div>
+            <div class="name-banner">Faith Chloe Mabilangan</div>
+        </section>
+
+        <section class="artist-section">
+            <div class="art-row">
+                <div class="art-container"><img src="https://i.postimg.cc/KjZwcMQ7/Torres1.jpg"></div>
+                <div class="art-container"><img src="https://i.postimg.cc/bN6cJ37Y/torres2.jpg"></div>
+            </div>
+            <div class="name-banner">Hannah Theresa Torres</div>
+        </section>
+
+        <section class="artist-section">
+            <div class="art-row">
+                <div class="art-container"><img src="https://i.postimg.cc/sDbmwWSK/Macapagal.webp"></div>
+            </div>
+            <div class="name-banner">Jasmine Chloe Macapagal</div>
+        </section>
+
+        <section class="artist-section">
+            <div class="art-row">
+                <div class="art-container"><img src="https://i.postimg.cc/wvPRgX6K/De-leon.png"></div>
+            </div>
+            <div class="name-banner">Jaxine Irish De Leon</div>
+        </section>
+
+        <section class="artist-section">
+            <div class="art-row">
+                <div class="art-container"><img src="https://i.postimg.cc/1t4v31q3/Tadina.jpg"></div>
+            </div>
+            <div class="name-banner">Jia Yvonne Tadina</div>
+        </section>
+
+        <section class="artist-section">
+            <div class="art-row">
+                <div class="art-container"><img src="https://i.postimg.cc/Kv7DF8HQ/wostal.png"></div>
+            </div>
+            <div class="name-banner">Joaquin Anthony Wostal</div>
+        </section>
+
+        <section class="artist-section">
+            <div class="art-row">
+                <div class="art-container"><img src="https://i.postimg.cc/rwP0L6Mz/basti.png"></div>
+            </div>
+            <div class="name-banner">John Basti Macasaet</div>
+        </section>
+
+        <section class="artist-section">
+            <div class="art-row">
+                <div class="art-container"><img src="https://i.postimg.cc/y8F5MKFj/lacson.jpg"></div>
+            </div>
+            <div class="name-banner">Juan Carlos Lacson</div>
+        </section>
+
+        <section class="artist-section">
+            <div class="art-row">
+                <div class="art-container"><img src="https://i.postimg.cc/FshDYScn/ferrer.png"></div>
+            </div>
+            <div class="name-banner">Klyne Yusof Ferrer</div>
+        </section>
+
+        <section class="artist-section">
+            <div class="art-row">
+                <div class="art-container"><img src="https://i.postimg.cc/YSjpMjbr/kylie1.jpg"></div>
+                <div class="art-container"><img src="https://i.postimg.cc/ZRd4v2kt/kylie2.jpg"></div>
+            </div>
+            <div class="name-banner">Kylie Pia Lucelle Cuaton</div>
+        </section>
+
+        <section class="artist-section">
+            <div class="art-row">
+                <div class="art-container"><img src="https://i.postimg.cc/VLNZ7M66/Manzano.png"></div>
+            </div>
+            <div class="name-banner">Meganne Audrey Manzano</div>
+        </section>
+
+        <section class="artist-section">
+            <div class="art-row">
+                <div class="art-container"><img src="https://i.postimg.cc/sfMw7z01/lameyra.png"></div>
+            </div>
+            <div class="name-banner">Ryan Jacob Lameyra</div>
+        </section>
+
+        <section class="artist-section">
+            <div class="art-row">
+                <div class="art-container"><img src="https://i.postimg.cc/HxDszd9J/Zuiah.png"></div>
+            </div>
+            <div class="name-banner">Zuiah Laye Soriano</div>
+        </section>
+    </div>
+
+    <footer class="footer">
+        <h1>THAT'S ALL</h1>
+        <p>Thank you for visiting our virtual gallery</p>
+        <div style="font-size: 2rem; margin: 20px;">✨ 🎨 💫 🌸</div>
+        <button class="back-to-top" onclick="window.scrollTo({top:0, behavior:'smooth'})">Back to Top ↑</button>
+        <div class="bottom-credit">
+            <div style="position: relative; z-index: 2;">
+                <p style="letter-spacing: 5px; font-weight: 300; opacity: 0.8; margin-bottom: 5px;">GRADE 10 (10-1)</p>
+                <p style="font-size: 0.7rem; opacity: 0.5;">VIRTUAL MUSEUM © 2026</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        window.onload = () => setTimeout(() => {
+            document.getElementById('loader').style.opacity = '0';
+            setTimeout(() => document.getElementById('loader').style.display = 'none', 1000);
+        }, 2000);
+
+        const canvas = document.getElementById('sparkle-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function initParticles() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            particles = [];
+            for(let i=0; i<150; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2 + 1,
+                    speed: Math.random() * 0.4 + 0.1,
+                    opacity: Math.random(),
+                    blinkSpeed: Math.random() * 0.02 + 0.01,
+                    isYellow: Math.random() > 0.6 
+                });
+            }
+        }
+
+        function drawParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            particles.forEach(p => {
+                p.y -= p.speed;
+                if(p.y < 0) p.y = canvas.height;
+                p.opacity += p.blinkSpeed;
+                let alpha = Math.abs(Math.sin(p.opacity));
+                if (isDark) {
+                    ctx.fillStyle = `rgba(200, 220, 255, ${alpha})`;
+                } else {
+                    ctx.fillStyle = p.isYellow ? `rgba(255, 215, 0, ${alpha})` : `rgba(157, 80, 187, ${alpha * 0.6})`;
+                }
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+            });
+            requestAnimationFrame(drawParticles);
+        }
+
+        initParticles(); drawParticles();
+
+        document.getElementById('dark-toggle').addEventListener('change', (e) => {
+            document.body.setAttribute('data-theme', e.target.checked ? 'dark' : 'light');
+        });
+
+        document.getElementById('grid-toggle').addEventListener('change', (e) => {
+            const gallery = document.getElementById('gallery');
+            if(e.target.checked) {
+                gallery.style.display = 'grid';
+                gallery.style.gridTemplateColumns = 'repeat(auto-fit, minmax(350px, 1fr))';
+                gallery.style.gap = '20px';
+                gallery.style.padding = '20px';
+            } else {
+                gallery.style.display = 'block';
+            }
+        });
+
+        let tourActive = false;
+        document.getElementById('tour-toggle').addEventListener('change', (e) => {
+            tourActive = e.target.checked;
+            if(tourActive) smoothTour();
+        });
+
+        function smoothTour() {
+            if(!tourActive) return;
+            window.scrollBy(0, 1);
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight) {
+                document.getElementById('tour-toggle').checked = false;
+                tourActive = false;
+            } else { requestAnimationFrame(smoothTour); }
+        }
+    </script>
+</body>
+</html>
